@@ -1,0 +1,13 @@
+debug: true
+# 10 - debug
+log_level: 10
+jupyterhub_url: 'http://192.168.0.31:30264'
+jupyterhub_api_prefix: '/hub/api'
+jupyterhub_api_token: 'ad6b8dc16f624b54a5b7d265f0744c97'
+es_service_url: 'http://192.168.0.31:31786'
+tenant: '5cc026228c74b2d34997744d'
+timeout: 1800
+cull_interval: 180
+max_age: 14400
+cull_users: false
+concurrency: 10
