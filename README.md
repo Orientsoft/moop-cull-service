@@ -30,13 +30,20 @@ log_level: 10
 jupyterhub_url: 'http://192.168.0.31:30264'
 jupyterhub_api_prefix: '/hub/api'
 jupyterhub_api_token: 'ad6b8dc16f624b54a5b7d265f0744c97'
-es_service_url: 'http://192.168.0.31:31786' # moop-es-service url (NOT ES)
-tenant: '5cc026228c74b2d34997744d' # tenant ID from tenant service!
-timeout: 1800 # server will be culled being inactive for 30 mins
-cull_interval: 180 # scan servers every 2 mins
-max_age: 14400 # server will run 4 hours max
-cull_users: false # we don't cull idle users
-concurrency: 10 # do not tune this
+# moop-es-service url (NOT ES)
+es_service_url: 'http://192.168.0.31:31786'
+# tenant ID from tenant service!
+tenant: '5cc026228c74b2d34997744d'
+# server will be culled being inactive for 30 mins
+timeout: 1800
+# scan servers every 2 mins
+cull_interval: 180
+# server will run 4 hours max
+max_age: 14400
+# we don't cull idle users
+cull_users: false
+# do not tune this
+concurrency: 10
 ```
 
 ## dev start
