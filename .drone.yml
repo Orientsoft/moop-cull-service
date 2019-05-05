@@ -1,0 +1,35 @@
+kind: pipeline
+name: moop-cull-service-ci
+
+steps:
+# build and push image
+- name: build-image
+  image: plugins/docker
+  settings:
+    repo: registry.datadynamic.io/moop/moop-cull-service
+    registry: registry.datadynamic.io
+    tags: "${DRONE_TAG}"
+    # tags: "${DRONE_COMMIT}"
+    username:
+      from_secret: repo-username
+    password:
+      from_secret: repo-password
+  when:
+    event:
+    - tag
+
+# deploy to k8s, pls update k8s config below
+- name: k8s-deploy
+  image: quay.io/honestbee/drone-kubernetes
+  settings:
+    kubernetes_server: https://192.168.0.31:6443
+    kubernetes_token: 
+      from_secret: kube-token
+    namespace: moop-dev
+    deployment: cull-service
+    repo: registry.datadynamic.io/moop/moop-cull-service
+    container: moop-cull-service
+    tag: "${DRONE_TAG}"
+  when:
+    event:
+    - tag

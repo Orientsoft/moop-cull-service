@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cull-service
+  # namespace: demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: moop
+      service: cull-service
+  template:
+    metadata:
+      labels:
+        app: moop
+        service: cull-service
+    spec:
+      serviceAccountName: moop
+
+      containers:
+      - name: moop-cull-service
+        image: registry.datadynamic.io/moop/moop-cull-service:{IMAGE_TAG_for_change}
+        volumeMounts:
+        - name:  cull-service-config
+          mountPath: /app/config.yaml
+          subPath: config.yaml
+
+        resources: {}
+          # requests:
+          #   memory: 32Mi
+          #   cpu: 40m
+          # limits:
+          #   memory: 2Gi
+          #   cpu: 1
+
+
+      imagePullSecrets:
+      - name: regcred
+
+      volumes:
+      - name:  cull-service-config
+        configMap:
+          name: cull-service-config
