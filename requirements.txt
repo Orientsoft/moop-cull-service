@@ -1,4 +1,4 @@
 python-dateutil
 tornado
-pycurl
+# pycurl
 pyyaml

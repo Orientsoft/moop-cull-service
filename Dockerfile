@@ -13,4 +13,4 @@ COPY --from=builder /install /usr/local
 WORKDIR /app
 COPY . .
 
-CMD [ "python", "cull-service.py" ]
+CMD [ "python", "cull_service.py" ]
