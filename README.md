@@ -2,8 +2,13 @@
 
 Extended 'cull idle server' service for jupyterhub, to cull idle servers with culling record support.  
 
-
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
+
+## environment
+
+```sh
+conda install python-dateutil tornado pycurl pyyaml -c conda-forge
+```
 
 ## jupyterhub config
 
