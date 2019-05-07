@@ -288,7 +288,7 @@ def cull_idle(
                 return False
             return True
         except Exception as e:
-            logger.error(''.format(e))
+            logger.error('{}'.format(e))
 
     @coroutine
     def handle_user(user):
