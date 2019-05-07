@@ -23,7 +23,7 @@ import dateutil.parser
 
 from tornado.gen import coroutine, multi
 from tornado.locks import Semaphore
-# from tornado.log import app_log
+from tornado.log import app_log
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.options import define, options, parse_command_line
@@ -146,140 +146,144 @@ def cull_idle(
         Returns True if server is now stopped (user removable),
         False otherwise.
         """
-        log_name = user['name']
-        if server_name:
-            log_name = '%s/%s' % (user['name'], server_name)
-        if server.get('pending'):
-            '''
-            app_log.warning(
-                "Not culling server %s with pending %s", log_name, server['pending']
+
+        try:
+            log_name = user['name']
+            if server_name:
+                log_name = '%s/%s' % (user['name'], server_name)
+            if server.get('pending'):
+                '''
+                app_log.warning(
+                    "Not culling server %s with pending %s", log_name, server['pending']
+                )
+                '''
+                logger.warning('Not culling server {} with pending {}'.format(
+                    log_name,
+                    server['pending']
+                ))
+                return False
+
+            # jupyterhub < 0.9 defined 'server.url' once the server was ready
+            # as an *implicit* signal that the server was ready.
+            # 0.9 adds a dedicated, explicit 'ready' field.
+            # By current (0.9) definitions, servers that have no pending
+            # events and are not ready shouldn't be in the model,
+            # but let's check just to be safe.
+
+            if not server.get('ready', bool(server['url'])):
+                '''
+                app_log.warning(
+                    "Not culling not-ready not-pending server %s: %s", log_name, server
+                )
+                '''
+                logger.warning('Not culling not-ready not-pending server {}: {}'.format(
+                    log_name,
+                    server
+                ))
+                return False
+
+            if server.get('started'):
+                age = now - parse_date(server['started'])
+            else:
+                # started may be undefined on jupyterhub < 0.9
+                age = None
+
+            # check last activity
+            # last_activity can be None in 0.9
+            if server['last_activity']:
+                inactive = now - parse_date(server['last_activity'])
+            else:
+                # no activity yet, use start date
+                # last_activity may be None with jupyterhub 0.9,
+                # which introduces the 'started' field which is never None
+                # for running servers
+                inactive = age
+
+            should_cull = (
+                inactive is not None and inactive.total_seconds() >= inactive_limit
             )
-            '''
-            logger.warning('Not culling server {} with pending {}'.format(
-                log_name,
-                server['pending']
-            ))
-            return False
-
-        # jupyterhub < 0.9 defined 'server.url' once the server was ready
-        # as an *implicit* signal that the server was ready.
-        # 0.9 adds a dedicated, explicit 'ready' field.
-        # By current (0.9) definitions, servers that have no pending
-        # events and are not ready shouldn't be in the model,
-        # but let's check just to be safe.
-
-        if not server.get('ready', bool(server['url'])):
-            '''
-            app_log.warning(
-                "Not culling not-ready not-pending server %s: %s", log_name, server
-            )
-            '''
-            logger.warning('Not culling not-ready not-pending server {}: {}'.format(
-                log_name,
-                server
-            ))
-            return False
-
-        if server.get('started'):
-            age = now - parse_date(server['started'])
-        else:
-            # started may be undefined on jupyterhub < 0.9
-            age = None
-
-        # check last activity
-        # last_activity can be None in 0.9
-        if server['last_activity']:
-            inactive = now - parse_date(server['last_activity'])
-        else:
-            # no activity yet, use start date
-            # last_activity may be None with jupyterhub 0.9,
-            # which introduces the 'started' field which is never None
-            # for running servers
-            inactive = age
-
-        should_cull = (
-            inactive is not None and inactive.total_seconds() >= inactive_limit
-        )
-        if should_cull:
-            '''
-            app_log.info(
-                "Culling server %s (inactive for %s)", log_name, format_td(inactive)
-            )
-            '''
-            logger.info('Culling server {} (inactive for {})'.format(
-                log_name,
-                format_td(inactive)
-            ))
-
-        if max_age and not should_cull:
-            # only check started if max_age is specified
-            # so that we can still be compatible with jupyterhub 0.8
-            # which doesn't define the 'started' field
-            if age is not None and age.total_seconds() >= max_age:
+            if should_cull:
                 '''
                 app_log.info(
-                    "Culling server %s (age: %s, inactive for %s)",
+                    "Culling server %s (inactive for %s)", log_name, format_td(inactive)
+                )
+                '''
+                logger.info('Culling server {} (inactive for {})'.format(
+                    log_name,
+                    format_td(inactive)
+                ))
+
+            if max_age and not should_cull:
+                # only check started if max_age is specified
+                # so that we can still be compatible with jupyterhub 0.8
+                # which doesn't define the 'started' field
+                if age is not None and age.total_seconds() >= max_age:
+                    '''
+                    app_log.info(
+                        "Culling server %s (age: %s, inactive for %s)",
+                        log_name,
+                        format_td(age),
+                        format_td(inactive),
+                    )
+                    '''
+                    logger.info('Culling server {} (age: {}, inactive for {})'.format(
+                        log_name,
+                        format_td(age),
+                        format_td(inactive)
+                    ))
+                    should_cull = True
+
+            if not should_cull:
+                '''
+                app_log.debug(
+                    "Not culling server %s (age: %s, inactive for %s)",
                     log_name,
                     format_td(age),
                     format_td(inactive),
                 )
                 '''
-                logger.info('Culling server {} (age: {}, inactive for {})'.format(
+                logger.info('Not culling server {} (age: {}, inactive for {})'.format(
                     log_name,
                     format_td(age),
                     format_td(inactive)
                 ))
-                should_cull = True
+                return False
 
-        if not should_cull:
-            '''
-            app_log.debug(
-                "Not culling server %s (age: %s, inactive for %s)",
-                log_name,
-                format_td(age),
-                format_td(inactive),
+            if server_name:
+                # culling a named server
+                delete_url = url + "/users/%s/servers/%s" % (
+                    quote(user['name']),
+                    quote(server['name']),
+                )
+            else:
+                delete_url = url + '/users/%s/server' % quote(user['name'])
+
+            # TODO : call es_service to record stopping event
+            body = json.dumps({
+                'user_name': user['name'],
+                'end': now,
+                'last_activity': server['last_activity'],
+                'tenant_id': tenant
+            })
+            print(body)
+            req = HTTPRequest(
+                url='{}/notify/end'.format(es_service_url),
+                method='POST',
+                body=body
             )
-            '''
-            logger.info('Not culling server {} (age: {}, inactive for {})'.format(
-                log_name,
-                format_td(age),
-                format_td(inactive)
-            ))
-            return False
+            resp = yield fetch(req)
+            logger.debug('es_service req: {}\nresp: {}'.format(body, resp.code))
 
-        if server_name:
-            # culling a named server
-            delete_url = url + "/users/%s/servers/%s" % (
-                quote(user['name']),
-                quote(server['name']),
-            )
-        else:
-            delete_url = url + '/users/%s/server' % quote(user['name'])
-
-        # TODO : call es_service to record stopping event
-        body = json.dumps({
-            'user_name': user['name'],
-            'end': now,
-            'last_activity': server['last_activity'],
-            'tenant_id': tenant
-        })
-        print(body)
-        req = HTTPRequest(
-            url='{}/notify/end'.format(es_service_url),
-            method='POST',
-            body=body
-        )
-        resp = yield fetch(req)
-        logger.debug('es_service req: {}\nresp: {}'.format(body, resp.code))
-
-        req = HTTPRequest(url=delete_url, method='DELETE', headers=auth_header)
-        resp = yield fetch(req)
-        if resp.code == 202:
-            # app_log.warning("Server %s is slow to stop", log_name)
-            logger.warning('Server {} is slow to stop'.format(log_name))
-            # return False to prevent culling user with pending shutdowns
-            return False
-        return True
+            req = HTTPRequest(url=delete_url, method='DELETE', headers=auth_header)
+            resp = yield fetch(req)
+            if resp.code == 202:
+                # app_log.warning("Server %s is slow to stop", log_name)
+                logger.warning('Server {} is slow to stop'.format(log_name))
+                # return False to prevent culling user with pending shutdowns
+                return False
+            return True
+        except Exception as e:
+            print(e)
 
     @coroutine
     def handle_user(user):
