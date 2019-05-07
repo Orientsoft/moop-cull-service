@@ -4,6 +4,7 @@ from datetime import datetime
 from datetime import timezone
 from functools import partial
 from functools import wraps
+import json
 
 import traceback
 import time
@@ -44,6 +45,9 @@ with open(CONFIG_PATH) as config_file:
     hub_api_token = configs['jupyterhub_api_token']
 
     hub_api_url = '{}{}'.format(hub_url, hub_api_prefix)
+
+    es_service_url = configs['es_service_url']
+    tenant = configs['tenant']
 
     timeout = configs['timeout']
     cull_interval = configs['cull_interval']
@@ -251,6 +255,18 @@ def cull_idle(
             )
         else:
             delete_url = url + '/users/%s/server' % quote(user['name'])
+
+        # TODO : call es_service to record stopping event
+        req = HTTPRequest(
+            url='{}/notify/end'.format(es_service_url),
+            method='POST',
+            body=json.dump({
+                'user_name': user['name'],
+                'end': now,
+                'last_activity': server['last_activity'],
+                'tenant_id': tenant
+            })
+        )
 
         req = HTTPRequest(url=delete_url, method='DELETE', headers=auth_header)
         resp = yield fetch(req)
