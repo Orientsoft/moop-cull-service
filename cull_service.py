@@ -263,14 +263,13 @@ def cull_idle(
             else:
                 delete_url = url + '/users/%s/server' % quote(user['name'])
 
-            # TODO : call es_service to record stopping event
+            # call es_service to record stopping event
             body = json.dumps({
                 'user_name': user['name'],
                 'end': now,
                 'last_activity': server['last_activity'],
                 'tenant_id': tenant
             }, default=datetime_convertor)
-            print(body)
             req = HTTPRequest(
                 url='{}/notify/end'.format(es_service_url),
                 method='POST',
