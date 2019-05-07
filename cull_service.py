@@ -76,6 +76,11 @@ logger.info('\n*** Cull-Service ***\n\nGot configs:\nhub_api_url: {}\ntimeout: {
     concurrency
 ))
 
+# helper
+def datetime_convertor(o):
+    if isinstance(o, datetime.datetime):
+        return o.__str__()
+
 def parse_date(date_string):
     """Parse a timestamp
 
@@ -264,7 +269,7 @@ def cull_idle(
                 'end': now,
                 'last_activity': server['last_activity'],
                 'tenant_id': tenant
-            })
+            }, default=datetime_convertor)
             print(body)
             req = HTTPRequest(
                 url='{}/notify/end'.format(es_service_url),
@@ -283,7 +288,7 @@ def cull_idle(
                 return False
             return True
         except Exception as e:
-            print(e)
+            logger.error(''.format(e))
 
     @coroutine
     def handle_user(user):
