@@ -146,9 +146,15 @@ def cull_idle(
         if server_name:
             log_name = '%s/%s' % (user['name'], server_name)
         if server.get('pending'):
+            '''
             app_log.warning(
                 "Not culling server %s with pending %s", log_name, server['pending']
             )
+            '''
+            logger.warning('Not culling server {} with pending {}'.format(
+                log_name,
+                server['pending']
+            ))
             return False
 
         # jupyterhub < 0.9 defined 'server.url' once the server was ready
@@ -159,9 +165,15 @@ def cull_idle(
         # but let's check just to be safe.
 
         if not server.get('ready', bool(server['url'])):
+            '''
             app_log.warning(
                 "Not culling not-ready not-pending server %s: %s", log_name, server
             )
+            '''
+            logger.warning('Not culling not-ready not-pending server {}: {}'.format(
+                log_name,
+                server
+            ))
             return False
 
         if server.get('started'):
@@ -185,10 +197,12 @@ def cull_idle(
             inactive is not None and inactive.total_seconds() >= inactive_limit
         )
         if should_cull:
+            '''
             app_log.info(
                 "Culling server %s (inactive for %s)", log_name, format_td(inactive)
             )
-            logger.debug('Culling server {} (inactive for {})'.format(
+            '''
+            logger.info('Culling server {} (inactive for {})'.format(
                 log_name,
                 format_td(inactive)
             ))
@@ -198,13 +212,15 @@ def cull_idle(
             # so that we can still be compatible with jupyterhub 0.8
             # which doesn't define the 'started' field
             if age is not None and age.total_seconds() >= max_age:
+                '''
                 app_log.info(
                     "Culling server %s (age: %s, inactive for %s)",
                     log_name,
                     format_td(age),
                     format_td(inactive),
                 )
-                logger.debug('Culling server {} (age: {}, inactive for {})'.format(
+                '''
+                logger.info('Culling server {} (age: {}, inactive for {})'.format(
                     log_name,
                     format_td(age),
                     format_td(inactive)
@@ -212,12 +228,19 @@ def cull_idle(
                 should_cull = True
 
         if not should_cull:
+            '''
             app_log.debug(
                 "Not culling server %s (age: %s, inactive for %s)",
                 log_name,
                 format_td(age),
                 format_td(inactive),
             )
+            '''
+            logger.info('Not culling server {} (age: {}, inactive for {})'.format(
+                log_name,
+                format_td(age),
+                format_td(inactive)
+            ))
             return False
 
         if server_name:
@@ -232,7 +255,8 @@ def cull_idle(
         req = HTTPRequest(url=delete_url, method='DELETE', headers=auth_header)
         resp = yield fetch(req)
         if resp.code == 202:
-            app_log.warning("Server %s is slow to stop", log_name)
+            # app_log.warning("Server %s is slow to stop", log_name)
+            logger.warning('Server {} is slow to stop'.format(log_name))
             # return False to prevent culling user with pending shutdowns
             return False
         return True
@@ -273,11 +297,17 @@ def cull_idle(
         # some servers are still running, cannot cull users
         still_alive = len(results) - sum(results)
         if still_alive:
+            '''
             app_log.debug(
                 "Not culling user %s with %i servers still alive",
                 user['name'],
                 still_alive,
             )
+            '''
+            logger.debug('Not culling user {} with {} servers still alive'.format(
+                user['name'],
+                still_alive
+            ))
             return False
 
         should_cull = False
@@ -301,28 +331,46 @@ def cull_idle(
             inactive is not None and inactive.total_seconds() >= inactive_limit
         )
         if should_cull:
-            app_log.info("Culling user %s (inactive for %s)", user['name'], inactive)
+            # app_log.info("Culling user %s (inactive for %s)", user['name'], inactive)
+            logger.debug('Culling user {} (inactive for {})'.format(
+                user['name'],
+                inactive
+            ))
 
         if max_age and not should_cull:
             # only check created if max_age is specified
             # so that we can still be compatible with jupyterhub 0.8
             # which doesn't define the 'started' field
             if age is not None and age.total_seconds() >= max_age:
+                '''
                 app_log.info(
                     "Culling user %s (age: %s, inactive for %s)",
                     user['name'],
                     format_td(age),
                     format_td(inactive),
                 )
+                '''
+                logger.info('Culling user {} (age: {}, inactive for {})'.format(
+                    user['name'],
+                    format_td(age),
+                    format_td(inactive)
+                ))
                 should_cull = True
 
         if not should_cull:
+            '''
             app_log.debug(
                 "Not culling user %s (created: %s, last active: %s)",
                 user['name'],
                 format_td(age),
                 format_td(inactive),
             )
+            '''
+            logger.info('Not culling user {} (age: {}, inactive for {})'.format(
+                user['name'],
+                format_td(age),
+                format_td(inactive)
+            ))
             return False
 
         req = HTTPRequest(
@@ -338,19 +386,26 @@ def cull_idle(
         try:
             result = yield f
         except Exception:
-            app_log.exception("Error processing %s", name)
+            # app_log.exception("Error processing %s", name)
+            logger.error('Error processing {}'.format(name))
         else:
             if result:
-                app_log.debug("Finished culling %s", name)
+                # app_log.debug("Finished culling %s", name)
+                logger.debug('Finish culling {}'.format(name))
 
 if __name__ == '__main__':
     try:
         AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
     except ImportError as e:
+        '''
         app_log.warning(
             "Could not load pycurl: %s\n"
             "pycurl is recommended if you have a large number of users.",
             e,
+        )
+        '''
+        logger.warning(
+            'Could not load pycurl: %s\npycurl is recommended if you have a large number of users.'.format(e)
         )
 
     loop = IOLoop.current()
