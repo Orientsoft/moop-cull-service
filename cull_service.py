@@ -188,6 +188,10 @@ def cull_idle(
             app_log.info(
                 "Culling server %s (inactive for %s)", log_name, format_td(inactive)
             )
+            logger.debug('Culling server {} (inactive for {})'.format(
+                log_name,
+                format_td(inactive)
+            ))
 
         if max_age and not should_cull:
             # only check started if max_age is specified
@@ -200,6 +204,11 @@ def cull_idle(
                     format_td(age),
                     format_td(inactive),
                 )
+                logger.debug('Culling server {} (age: {}, inactive for {})'.format(
+                    log_name,
+                    format_td(age),
+                    format_td(inactive)
+                ))
                 should_cull = True
 
         if not should_cull:
