@@ -263,6 +263,7 @@ def cull_idle(
             'last_activity': server['last_activity'],
             'tenant_id': tenant
         })
+        print(body)
         req = HTTPRequest(
             url='{}/notify/end'.format(es_service_url),
             method='POST',
