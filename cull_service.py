@@ -274,7 +274,10 @@ def cull_idle(
             req = HTTPRequest(
                 url='{}/notify/end'.format(es_service_url),
                 method='POST',
-                body=body
+                body=body,
+                headers={
+                    'Content-Type': 'application/json'
+                }
             )
             resp = yield fetch(req)
             logger.debug('es_service req: {}\nresp: {}'.format(body, resp.code))
