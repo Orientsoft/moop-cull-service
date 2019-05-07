@@ -78,7 +78,7 @@ logger.info('\n*** Cull-Service ***\n\nGot configs:\nhub_api_url: {}\ntimeout: {
 
 # helper
 def datetime_convertor(o):
-    if isinstance(o, datetime.datetime):
+    if isinstance(o, datetime):
         return o.__str__()
 
 def parse_date(date_string):
