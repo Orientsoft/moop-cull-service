@@ -22,7 +22,7 @@ import dateutil.parser
 
 from tornado.gen import coroutine, multi
 from tornado.locks import Semaphore
-from tornado.log import app_log
+# from tornado.log import app_log
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.options import define, options, parse_command_line
@@ -405,7 +405,7 @@ if __name__ == '__main__':
         )
         '''
         logger.warning(
-            'Could not load pycurl: %s\npycurl is recommended if you have a large number of users.'.format(e)
+            'Could not load pycurl: {}\npycurl is recommended if you have a large number of users.'.format(e)
         )
 
     loop = IOLoop.current()
