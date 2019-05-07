@@ -264,6 +264,7 @@ def cull_idle(
             'tenant_id': tenant
         })
         print(body)
+        '''
         req = HTTPRequest(
             url='{}/notify/end'.format(es_service_url),
             method='POST',
@@ -271,7 +272,8 @@ def cull_idle(
         )
         resp = yield fetch(req)
         logger.debug('es_service req: {}\nresp: {}'.format(body, resp.code))
-
+        '''
+        
         req = HTTPRequest(url=delete_url, method='DELETE', headers=auth_header)
         resp = yield fetch(req)
         if resp.code == 202:
