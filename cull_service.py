@@ -79,7 +79,7 @@ logger.info('\n*** Cull-Service ***\n\nGot configs:\nhub_api_url: {}\ntimeout: {
 # helper
 def datetime_convertor(o):
     if isinstance(o, datetime):
-        return o.__str__()
+        return o.isoformat()
 
 def parse_date(date_string):
     """Parse a timestamp
@@ -267,7 +267,7 @@ def cull_idle(
             body = json.dumps({
                 'user_name': user['name'],
                 'end': now,
-                'last_activity': server['last_activity'],
+                'last_activity': server['last_activity'][:-1],
                 'tenant_id': tenant
             }, default=datetime_convertor)
             req = HTTPRequest(
