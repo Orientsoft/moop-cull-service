@@ -266,7 +266,7 @@ def cull_idle(
             # call es_service to record stopping event
             body = json.dumps({
                 'user_name': user['name'],
-                'end': now.strftime('%Y-%m-%dT%H:%M:%SZ.%f'),
+                'end': now.strftime('%Y-%m-%dT%H:%M:%S.%f'),
                 'last_activity': server['last_activity'][:-1],
                 'tenant_id': tenant
             }, default=datetime_convertor)
