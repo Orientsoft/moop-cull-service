@@ -263,6 +263,10 @@ def cull_idle(
             else:
                 delete_url = url + '/users/%s/server' % quote(user['name'])
 
+            req = HTTPRequest(url=delete_url, method='DELETE', headers=auth_header)
+            resp = yield fetch(req)
+            slow_flag = resp.code == 202
+
             # call es_service to record stopping event
             body = json.dumps({
                 'user_name': user['name'],
@@ -281,9 +285,7 @@ def cull_idle(
             resp = yield fetch(req)
             logger.debug('es_service req: {}\nresp: {}'.format(body, resp.code))
 
-            req = HTTPRequest(url=delete_url, method='DELETE', headers=auth_header)
-            resp = yield fetch(req)
-            if resp.code == 202:
+            if slow_flag:
                 # app_log.warning("Server %s is slow to stop", log_name)
                 logger.warning('Server {} is slow to stop'.format(log_name))
                 # return False to prevent culling user with pending shutdowns
