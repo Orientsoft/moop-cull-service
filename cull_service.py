@@ -47,6 +47,7 @@ with open(CONFIG_PATH) as config_file:
     hub_api_url = '{}{}'.format(hub_url, hub_api_prefix)
 
     es_service_url = configs['es_service_url']
+    moopkey = configs['moopkey']
     tenant = configs['tenant']
 
     timeout = configs['timeout']
@@ -279,7 +280,8 @@ def cull_idle(
                 method='POST',
                 body=body,
                 headers={
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'moopkey':moopkey
                 }
             )
             resp = yield fetch(req)
