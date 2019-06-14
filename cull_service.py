@@ -47,7 +47,7 @@ with open(CONFIG_PATH) as config_file:
     hub_api_url = '{}{}'.format(hub_url, hub_api_prefix)
 
     es_service_url = configs['es_service_url']
-    moopkey = configs['moopkey']
+    moopkey = configs['MOOPKEY']
     tenant = configs['tenant']
 
     timeout = configs['timeout']
