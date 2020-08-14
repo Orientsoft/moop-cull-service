@@ -4,13 +4,12 @@ log_level: 10
 jupyterhub_url: 'http://192.168.0.31:30264'
 jupyterhub_api_prefix: '/hub/api'
 jupyterhub_api_token: 'ad6b8dc16f624b54a5b7d265f0744c97'
-es_service_url: 'http://192.168.0.34:32280/services/v1/audit'
-tenant: '5cc026228c74b2d34997744d'
-# timeout: 1800
-timeout: 20
-# cull_interval: 180
-cull_interval: 10
-max_age: 14400
+inactive_timeout: 1800 # in sec
+cull_interval: 50 # cull every 180 sec
+max_age: 86400 # in sec
 cull_users: false
 concurrency: 10
-MOOPKEY:'faf23ej21fklajfla'
+hash_key: 'mooplab-cull-timeout-hash'
+redis_host: '192.168.0.31'
+redis_port: 30078
+redis_password: 'd2VsY29tZTEK'

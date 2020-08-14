@@ -13,6 +13,7 @@ import logging.handlers
 import sys
 import uuid
 import yaml
+import redis
 
 try:
     from urllib.parse import quote
@@ -46,15 +47,16 @@ with open(CONFIG_PATH) as config_file:
 
     hub_api_url = '{}{}'.format(hub_url, hub_api_prefix)
 
-    es_service_url = configs['es_service_url']
-    moopkey = configs['MOOPKEY']
-    tenant = configs['tenant']
-
-    timeout = configs['timeout']
+    inactive_timeout = configs['inactive_timeout']
     cull_interval = configs['cull_interval']
     max_age = configs['max_age']
     cull_users = configs['cull_users']
     concurrency = configs['concurrency']
+
+    hash_key = configs['hash_key']
+    redis_host = configs['redis_host']
+    redis_port = configs['redis_port']
+    redis_password = None if configs['redis_password'] == '' else configs['redis_password']
 
 def setup_logger(level):
     handler = logging.StreamHandler(stream=sys.stdout)
@@ -68,14 +70,16 @@ def setup_logger(level):
     return logger
 
 logger = setup_logger(int(LOG_LEVEL))
-logger.info('\n*** Cull-Service ***\n\nGot configs:\nhub_api_url: {}\ntimeout: {}\ncull_interval: {}\nmax_age: {}\ncull_users: {}\nconcurrency: {}\n'.format(
+logger.info('\n*** Cull-Service ***\n\nGot configs:\nhub_api_url: {}\ninactive_timeout: {}\ncull_interval: {}\nmax_age: {}\ncull_users: {}\nconcurrency: {}\n'.format(
     hub_api_url,
-    timeout,
+    inactive_timeout,
     cull_interval,
     max_age,
     cull_users,
     concurrency
 ))
+
+r = redis.Redis(host=redis_host, port=redis_port, db=0, password=redis_password)
 
 # helper
 def datetime_convertor(o):
@@ -121,6 +125,10 @@ def cull_idle(
 
     If cull_users, inactive *users* will be deleted as well.
     """
+
+    # read redis
+    # timeouts = r.hgetall(hash_key)
+
     auth_header = {'Authorization': 'token %s' % api_token}
     req = HTTPRequest(url=url + '/users', headers=auth_header)
     now = datetime.now(timezone.utc)
@@ -214,7 +222,7 @@ def cull_idle(
                     "Culling server %s (inactive for %s)", log_name, format_td(inactive)
                 )
                 '''
-                logger.info('Culling server {} (inactive for {})'.format(
+                logger.info('Culling inactive server {} (inactive for {})'.format(
                     log_name,
                     format_td(inactive)
                 ))
@@ -232,7 +240,20 @@ def cull_idle(
                         format_td(inactive),
                     )
                     '''
-                    logger.info('Culling server {} (age: {}, inactive for {})'.format(
+                    logger.info('Culling unexpected expired server {} (age: {}, inactive for {})'.format(
+                        log_name,
+                        format_td(age),
+                        format_td(inactive)
+                    ))
+                    should_cull = True
+
+            user_id = user['name'].split('jupyter-')[0]
+            timeout = int(r.hget(hash_key, user_id))
+            logger.info('uid: {}, timeout: {}'.format(user_id, timeout))
+
+            if timeout is not None and not should_cull:
+                if age is not None and age.total_seconds() >= timeout * 60:
+                    logger.info('Culling expired server {} (age: {}, inactive for {})'.format(
                         log_name,
                         format_td(age),
                         format_td(inactive)
@@ -268,25 +289,6 @@ def cull_idle(
             resp = yield fetch(req)
             slow_flag = resp.code == 202
 
-            # call es_service to record stopping event
-            body = json.dumps({
-                'user_name': user['name'],
-                'end': now.strftime('%Y-%m-%dT%H:%M:%S.%f'),
-                'last_activity': server['last_activity'][:-1],
-                'tenant_id': tenant
-            }, default=datetime_convertor)
-            req = HTTPRequest(
-                url='{}/notify/end'.format(es_service_url),
-                method='POST',
-                body=body,
-                headers={
-                    'Content-Type': 'application/json',
-                    'moopkey':moopkey
-                }
-            )
-            resp = yield fetch(req)
-            logger.debug('es_service req: {}\nresp: {}'.format(body, resp.code))
-
             if slow_flag:
                 # app_log.warning("Server %s is slow to stop", log_name)
                 logger.warning('Server {} is slow to stop'.format(log_name))
@@ -294,7 +296,8 @@ def cull_idle(
                 return False
             return True
         except Exception as e:
-            logger.error('{}'.format(e))
+            # logger.error('{}'.format(e))
+            logger.error(traceback.format_exc())
 
     @coroutine
     def handle_user(user):
@@ -322,6 +325,7 @@ def cull_idle(
                     'pending': user['pending'],
                     'url': user['server'],
                 }
+
         server_futures = [
             handle_server(user, server_name, server)
             for server_name, server in servers.items()
@@ -423,6 +427,7 @@ def cull_idle(
         except Exception:
             # app_log.exception("Error processing %s", name)
             logger.error('Error processing {}'.format(name))
+            logger.error(traceback.format_exc(file=sys.stdout))
         else:
             if result:
                 # app_log.debug("Finished culling %s", name)
@@ -448,7 +453,7 @@ if __name__ == '__main__':
         cull_idle,
         url=hub_api_url,
         api_token=hub_api_token,
-        inactive_limit=timeout,
+        inactive_limit=inactive_timeout,
         cull_users=cull_users,
         max_age=max_age,
         concurrency=concurrency,
