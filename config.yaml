@@ -12,4 +12,4 @@ concurrency: 10
 hash_key: 'mooplab-cull-timeout-hash'
 redis_host: '192.168.0.31'
 redis_port: 30078
-redis_password: 'd2VsY29tZTEK'
+redis_password: 'd2VsY29tZTEK' # set '' if you don't need password (will translate to None in python)
